@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>شحن غزة الذكي</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .sidebar-transition { transition: transform 0.3s ease-in-out; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        @keyframes success-bounce {
+            0% { transform: scale(0); }
+            70% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .animate-success { animation: success-bounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen pb-20">
+
+    <!-- Header -->
+    <header class="bg-blue-700 text-white p-4 shadow-lg sticky top-0 z-50 flex justify-between items-center">
+        <button onclick="toggleSidebar()" class="text-2xl w-10 h-10 flex items-center justify-center hover:bg-blue-800 rounded-full">
+            <i class="fas fa-bars"></i>
+        </button>
+        <h1 class="text-xl font-black">شحن غزة الذكي <i class="fas fa-bolt text-yellow-400"></i></h1>
+        <div class="w-10"></div>
+    </header>
+
+    <!-- Sidebar Overlay -->
+    <div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black opacity-0 pointer-events-none transition-opacity duration-300 z-[60]"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed top-0 right-0 h-full w-72 bg-white shadow-2xl z-[70] sidebar-transition translate-x-full overflow-y-auto">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-2xl font-bold text-blue-700">القائمة</h2>
+                <button onclick="toggleSidebar()" class="text-gray-500 text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            <nav class="space-y-4">
+                <a href="javascript:void(0)" onclick="switchTab('home')" class="flex items-center gap-4 p-3 hover:bg-blue-50 rounded-xl text-gray-700 font-bold transition">
+                    <i class="fas fa-plus-circle text-blue-600"></i> تسجيل جديد
+                </a>
+                <a href="javascript:void(0)" onclick="switchTab('customers')" class="flex items-center gap-4 p-3 hover:bg-blue-50 rounded-xl text-gray-700 font-bold transition">
+                    <i class="fas fa-users text-blue-600"></i> سجل العملاء
+                </a>
+                <a href="javascript:void(0)" onclick="switchTab('history')" class="flex items-center gap-4 p-3 hover:bg-blue-50 rounded-xl text-gray-700 font-bold transition">
+                    <i class="fas fa-history text-blue-600"></i> سجل العمليات
+                </a>
+                <a href="javascript:void(0)" onclick="switchTab('reports')" class="flex items-center gap-4 p-3 hover:bg-blue-50 rounded-xl text-gray-700 font-bold transition">
+                    <i class="fas fa-chart-line text-blue-600"></i> تقارير اليوم
+                </a>
+                <div class="border-t pt-4 mt-4">
+                    <button onclick="clearData()" class="flex items-center gap-4 p-3 w-full text-red-600 font-bold hover:bg-red-50 rounded-xl transition">
+                        <i class="fas fa-trash-alt"></i> مسح جميع البيانات
+                    </button>
+                </div>
+            </nav>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="p-4 max-w-lg mx-auto">
+        
+        <!-- Tab: Home (New Charge) -->
+        <section id="home" class="tab-content active space-y-6">
+            <!-- Daily Summary Mini Cards -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border-r-4 border-green-500">
+                    <p class="text-xs text-gray-500">كاش اليوم</p>
+                    <p id="mini-cash" class="text-xl font-black text-green-600">0 ₪</p>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border-r-4 border-blue-500">
+                    <p class="text-xs text-gray-500">شحنات اليوم</p>
+                    <p id="mini-charges" class="text-xl font-black text-blue-600">0 ₪</p>
+                </div>
+            </div>
+
+            <!-- Add Device Form -->
+            <div class="bg-white p-5 rounded-3xl shadow-md space-y-4 border border-gray-100">
+                <h3 class="font-black text-lg text-gray-800 flex items-center gap-2">
+                    <i class="fas fa-mobile-alt text-blue-500"></i> تسجيل عملية جديدة
+                </h3>
+                
+                <!-- Customer Name with Suggestions -->
+                <div class="relative">
+                    <label class="block text-xs font-bold text-gray-400 mb-1">اسم الشخص (إجباري)</label>
+                    <input type="text" id="custName" oninput="handleNameInput(this.value)" placeholder="مثلاً: محمد علي" 
+                           class="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-blue-500 focus:bg-white outline-none transition font-bold">
+                    <div id="suggestions" class="absolute w-full bg-white shadow-xl rounded-2xl mt-1 z-20 hidden max-h-48 overflow-y-auto border border-gray-100"></div>
+                </div>
+
+                <!-- Phone and Prefix -->
+                <div class="flex gap-2">
+                    <div class="w-24">
+                        <label class="block text-xs font-bold text-gray-400 mb-1">المقدمة</label>
+                        <select id="prefix" class="w-full p-4 bg-gray-50 rounded-2xl border-none outline-none font-bold">
+                            <option value="970">970</option>
+                            <option value="972">972</option>
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-xs font-bold text-gray-400 mb-1">رقم الجوال (اختياري)</label>
+                        <input type="number" id="custPhone" placeholder="59xxxxxxxx" 
+                               class="w-full p-4 bg-gray-50 rounded-2xl border-none outline-none font-bold">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 mb-1">نوع الجهاز</label>
+                        <input type="text" id="devType" placeholder="جوال/لابتوب" 
+                               class="w-full p-4 bg-gray-50 rounded-2xl border-none outline-none font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 mb-1">رقم الرف</label>
+                        <input type="text" id="shelfNum" placeholder="A1" 
+                               class="w-full p-4 bg-gray-50 rounded-2xl border-none outline-none font-bold">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-1">المبلغ (شيكل)</label>
+                    <input type="number" id="amount" placeholder="0.00" 
+                           class="w-full p-5 bg-blue-50 rounded-2xl border-none outline-none font-black text-2xl text-center text-blue-700">
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button onclick="processTransaction('charge')" class="flex-1 bg-blue-600 text-white p-4 rounded-2xl font-black shadow-lg shadow-blue-200 active:scale-95 transition">
+                        شحن جهاز
+                    </button>
+                    <button onclick="processTransaction('deposit')" class="flex-1 bg-green-500 text-white p-4 rounded-2xl font-black shadow-lg shadow-green-200 active:scale-95 transition">
+                        إيداع رصيد
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-center gap-6 py-2">
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input type="radio" name="payMethod" value="balance" checked class="w-5 h-5 accent-blue-600">
+                        <span class="font-bold text-gray-600 group-hover:text-blue-600">من الرصيد</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input type="radio" name="payMethod" value="cash" class="w-5 h-5 accent-green-600">
+                        <span class="font-bold text-gray-600 group-hover:text-green-600">دفع كاش</span>
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab: Customers -->
+        <section id="customers" class="tab-content space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-black text-gray-800">قائمة العملاء</h2>
+                <div class="bg-white px-3 py-1 rounded-full text-xs font-bold text-blue-600 border border-blue-100">
+                    إجمالي الزبائن: <span id="cust-count">0</span>
+                </div>
+            </div>
+            <div id="customersList" class="space-y-3"></div>
+        </section>
+
+        <!-- Tab: History -->
+        <section id="history" class="tab-content space-y-4">
+            <h2 class="text-xl font-black text-gray-800">سجل العمليات الأخير</h2>
+            <div id="transactionsList" class="space-y-3"></div>
+        </section>
+
+        <!-- Tab: Reports -->
+        <section id="reports" class="tab-content space-y-6">
+            <h2 class="text-xl font-black text-gray-800 text-center">تقارير الحسابات اليومية</h2>
+            
+            <div class="bg-white p-6 rounded-3xl shadow-sm space-y-4">
+                <div class="flex justify-between items-center p-3 bg-green-50 rounded-2xl">
+                    <span class="font-bold text-gray-700">إجمالي الكاش المستلم:</span>
+                    <span id="rep-cash" class="text-2xl font-black text-green-600">0 ₪</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-blue-50 rounded-2xl">
+                    <span class="font-bold text-gray-700">قيمة الشحنات المنفذة:</span>
+                    <span id="rep-charges" class="text-2xl font-black text-blue-600">0 ₪</span>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-red-100">
+                <h3 class="font-black text-red-500 mb-4 flex items-center gap-2">
+                    <i class="fas fa-exclamation-triangle"></i> قائمة المطاليب (الديون)
+                </h3>
+                <div id="debtorsList" class="space-y-3"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="fixed inset-0 bg-black/70 z-[100] hidden items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 text-center animate-success relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 bg-green-500"></div>
+            <div class="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 text-5xl">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h2 class="text-2xl font-black text-gray-800 mb-2">تم التسجيل بنجاح!</h2>
+            <p class="text-gray-500 font-bold mb-4">رقم الشحنة التسلسلي:</p>
+            <div id="successSerial" class="text-7xl font-black text-blue-600 mb-8 tracking-tighter">1</div>
+            <button onclick="closeModal()" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-xl shadow-xl shadow-blue-200 active:scale-95 transition">
+                موافق
+            </button>
+        </div>
+    </div>
+
+    <!-- Bottom Navbar -->
+    <nav class="fixed bottom-0 left-0 right-0 glass border-t border-gray-100 flex justify-around p-3 z-50 rounded-t-[2rem] shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+        <button onclick="switchTab('home')" class="nav-btn active flex flex-col items-center gap-1 text-blue-600">
+            <div class="w-12 h-12 flex items-center justify-center rounded-2xl bg-blue-50">
+                <i class="fas fa-plus-circle text-xl"></i>
+            </div>
+            <span class="text-[10px] font-bold">شحن</span>
+        </button>
+        <button onclick="switchTab('customers')" class="nav-btn flex flex-col items-center gap-1 text-gray-400">
+            <div class="w-12 h-12 flex items-center justify-center rounded-2xl">
+                <i class="fas fa-users text-xl"></i>
+            </div>
+            <span class="text-[10px] font-bold">زبائن</span>
+        </button>
+        <button onclick="switchTab('history')" class="nav-btn flex flex-col items-center gap-1 text-gray-400">
+            <div class="w-12 h-12 flex items-center justify-center rounded-2xl">
+                <i class="fas fa-history text-xl"></i>
+            </div>
+            <span class="text-[10px] font-bold">سجل</span>
+        </button>
+        <button onclick="switchTab('reports')" class="nav-btn flex flex-col items-center gap-1 text-gray-400">
+            <div class="w-12 h-12 flex items-center justify-center rounded-2xl">
+                <i class="fas fa-clipboard-list text-xl"></i>
+            </div>
+            <span class="text-[10px] font-bold">تقارير</span>
+        </button>
+    </nav>
+
+    <script>
+        // --- Core Data ---
+        let db = JSON.parse(localStorage.getItem('gazaChargeDB')) || {
+            customers: [],
+            transactions: [],
+            config: { lastSerial: 0 }
+        };
+
+        // --- Tab Switching ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            
+            // Update Nav Icons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-blue-600');
+                btn.classList.add('text-gray-400');
+                btn.querySelector('div').classList.remove('bg-blue-50');
+            });
+            const activeBtn = Array.from(document.querySelectorAll('.nav-btn')).find(b => b.getAttribute('onclick').includes(tabId));
+            activeBtn.classList.remove('text-gray-400');
+            activeBtn.classList.add('text-blue-600');
+            activeBtn.querySelector('div').classList.add('bg-blue-50');
+
+            if(tabId === 'customers') renderCustomers();
+            if(tabId === 'history') renderHistory();
+            if(tabId === 'reports') renderReports();
+            
+            window.scrollTo(0, 0);
+        }
+
+        // --- Sidebar ---
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const isOpen = !sidebar.classList.contains('translate-x-full');
+            
+            if (isOpen) {
+                sidebar.classList.add('translate-x-full');
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+            } else {
+                sidebar.classList.remove('translate-x-full');
+                overlay.classList.remove('opacity-0', 'pointer-events-none');
+            }
+        }
+
+        // --- Autocomplete Logic ---
+        function handleNameInput(val) {
+            const suggestionsEl = document.getElementById('suggestions');
+            if (val.length < 2) {
+                suggestionsEl.classList.add('hidden');
+                return;
+            }
+
+            const matches = db.customers.filter(c => c.name.includes(val));
+            if (matches.length > 0) {
+                suggestionsEl.innerHTML = matches.map(m => `
+                    <div onclick="selectSuggestion('${m.name}', '${m.phone}', '${m.lastDevice}')" 
+                         class="p-4 hover:bg-blue-50 border-b last:border-none cursor-pointer flex justify-between items-center">
+                        <span class="font-bold text-gray-700">${m.name}</span>
+                        <span class="text-xs text-blue-500">${m.phone}</span>
+                    </div>
+                `).join('');
+                suggestionsEl.classList.remove('hidden');
+            } else {
+                suggestionsEl.classList.add('hidden');
+            }
+        }
+
+        function selectSuggestion(name, phone, device) {
+            document.getElementById('custName').value = name;
+            document.getElementById('custPhone').value = phone;
+            document.getElementById('devType').value = device || '';
+            document.getElementById('suggestions').classList.add('hidden');
+        }
+
+        // --- Transactions Logic ---
+        function processTransaction(type) {
+            const name = document.getElementById('custName').value.trim();
+            const phone = document.getElementById('custPhone').value.trim();
+            const device = document.getElementById('devType').value.trim();
+            const shelf = document.getElementById('shelfNum').value.trim();
+            const amount = parseFloat(document.getElementById('amount').value);
+            const payMethod = document.querySelector('input[name="payMethod"]:checked').value;
+
+            if (!name) {
+                showToast('يرجى إدخال اسم الشخص');
+                return;
+            }
+            if (!amount || amount <= 0) {
+                showToast('يرجى إدخال مبلغ صحيح');
+                return;
+            }
+
+            // Create/Find Customer
+            let customer = db.customers.find(c => c.name === name);
+            if (!customer) {
+                customer = { id: Date.now(), name, phone, balance: 0, lastDevice: device };
+                db.customers.push(customer);
+            } else {
+                customer.phone = phone; // Update phone if changed
+                customer.lastDevice = device;
+            }
+
+            // Calculations
+            db.config.lastSerial++;
+            const trans = {
+                id: Date.now(),
+                serial: db.config.lastSerial,
+                date: new Date().toISOString(),
+                custName: name,
+                custPhone: phone,
+                amount: amount,
+                type: type, // charge or deposit
+                device: device,
+                shelf: shelf,
+                payMethod: payMethod
+            };
+
+            // Update Balance
+            if (type === 'deposit') {
+                customer.balance += amount;
+            } else {
+                // It's a Charge
+                if (payMethod === 'balance') {
+                    customer.balance -= amount;
+                }
+                // if cash, balance stays same but cash report increases
+            }
+
+            db.transactions.unshift(trans);
+            saveDB();
+            
+            // Show Success
+            document.getElementById('successSerial').innerText = trans.serial;
+            document.getElementById('successModal').classList.remove('hidden');
+            document.getElementById('successModal').classList.add('flex');
+            
+            // Reset Form
+            document.getElementById('custName').value = '';
+            document.getElementById('custPhone').value = '';
+            document.getElementById('devType').value = '';
+            document.getElementById('shelfNum').value = '';
+            document.getElementById('amount').value = '';
+            updateMiniStats();
+        }
+
+        // --- Rendering ---
+        function renderCustomers() {
+            const list = document.getElementById('customersList');
+            document.getElementById('cust-count').innerText = db.customers.length;
+            
+            if (db.customers.length === 0) {
+                list.innerHTML = `<p class="text-center text-gray-400 py-10">لا يوجد زبائن مسجلين حالياً</p>`;
+                return;
+            }
+
+            list.innerHTML = db.customers.sort((a,b) => b.balance - a.balance).map(c => `
+                <div class="bg-white p-4 rounded-2xl shadow-sm flex justify-between items-center border border-gray-50">
+                    <div>
+                        <p class="font-black text-gray-800">${c.name}</p>
+                        <p class="text-xs text-gray-400">${c.phone || 'بدون رقم'}</p>
+                    </div>
+                    <div class="text-left">
+                        <p class="text-xl font-black ${c.balance >= 0 ? 'text-green-600' : 'text-red-600'}">
+                            ${c.balance} ₪
+                        </p>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase">${c.balance >= 0 ? 'رصيد متوفر' : 'دين مستحق'}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('transactionsList');
+            if (db.transactions.length === 0) {
+                list.innerHTML = `<p class="text-center text-gray-400 py-10">لا يوجد عمليات مسجلة</p>`;
+                return;
+            }
+
+            list.innerHTML = db.transactions.map(t => `
+                <div class="bg-white p-4 rounded-2xl shadow-sm border-r-4 ${t.type === 'charge' ? 'border-orange-500' : 'border-green-500'} relative">
+                    <button onclick="deleteTrans(${t.id})" class="absolute left-3 top-3 text-gray-300 hover:text-red-500 p-2"><i class="fas fa-trash"></i></button>
+                    <div class="flex justify-between mb-2">
+                        <div>
+                            <span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-black">#${t.serial}</span>
+                            <h4 class="font-black text-gray-800 mt-1">${t.custName}</h4>
+                        </div>
+                        <div class="text-left ml-6">
+                            <span class="font-black text-lg ${t.type === 'charge' ? 'text-orange-600' : 'text-green-600'}">
+                                ${t.type === 'charge' ? '-' : '+'}${t.amount} ₪
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-end">
+                        <div class="text-xs text-gray-400 font-bold space-x-reverse space-x-2">
+                            <span><i class="far fa-clock"></i> ${new Date(t.date).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}</span>
+                            ${t.device ? `<span>| <i class="fas fa-plug"></i> ${t.device}</span>` : ''}
+                            ${t.shelf ? `<span>| <i class="fas fa-box"></i> رف ${t.shelf}</span>` : ''}
+                        </div>
+                        <button onclick="sendWA(${t.id})" class="bg-green-500 text-white px-3 py-1.5 rounded-xl text-xs font-black hover:bg-green-600 transition">
+                            <i class="fab fa-whatsapp"></i> وصل
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderReports() {
+            const today = new Date().toLocaleDateString();
+            const todayTrans = db.transactions.filter(t => new Date(t.date).toLocaleDateString() === today);
+            
+            // Total Cash = (Deposits) + (Charges marked as cash)
+            const cash = todayTrans
+                .filter(t => t.type === 'deposit' || (t.type === 'charge' && t.payMethod === 'cash'))
+                .reduce((sum, t) => sum + t.amount, 0);
+            
+            // Total Charges = (All charges regardless of payment method)
+            const charges = todayTrans
+                .filter(t => t.type === 'charge')
+                .reduce((sum, t) => sum + t.amount, 0);
+
+            document.getElementById('rep-cash').innerText = cash + ' ₪';
+            document.getElementById('rep-charges').innerText = charges + ' ₪';
+
+            // Debtors
+            const debtors = db.customers.filter(c => c.balance < 0);
+            const dList = document.getElementById('debtorsList');
+            if (debtors.length === 0) {
+                dList.innerHTML = `<p class="text-center text-gray-400 text-sm italic">لا يوجد ديون حالياً، الحمد لله!</p>`;
+            } else {
+                dList.innerHTML = debtors.map(d => `
+                    <div class="flex justify-between items-center py-2 border-b border-gray-50 last:border-none">
+                        <span class="font-bold text-gray-700">${d.name}</span>
+                        <span class="font-black text-red-600">${Math.abs(d.balance)} ₪</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function updateMiniStats() {
+            const today = new Date().toLocaleDateString();
+            const todayTrans = db.transactions.filter(t => new Date(t.date).toLocaleDateString() === today);
+            const cash = todayTrans.filter(t => t.type === 'deposit' || (t.type === 'charge' && t.payMethod === 'cash')).reduce((sum, t) => sum + t.amount, 0);
+            const charges = todayTrans.filter(t => t.type === 'charge').reduce((sum, t) => sum + t.amount, 0);
+            
+            document.getElementById('mini-cash').innerText = cash + ' ₪';
+            document.getElementById('mini-charges').innerText = charges + ' ₪';
+        }
+
+        // --- Actions ---
+        function deleteTrans(id) {
+            const trans = db.transactions.find(t => t.id === id);
+            if (!trans) return;
+
+            // Reverse Balance
+            const customer = db.customers.find(c => c.name === trans.custName);
+            if (customer) {
+                if (trans.type === 'deposit') {
+                    customer.balance -= trans.amount;
+                } else if (trans.type === 'charge' && trans.payMethod === 'balance') {
+                    customer.balance += trans.amount;
+                }
+            }
+
+            db.transactions = db.transactions.filter(t => t.id !== id);
+            saveDB();
+            renderHistory();
+            updateMiniStats();
+        }
+
+        function sendWA(id) {
+            const t = db.transactions.find(tr => tr.id === id);
+            const c = db.customers.find(cu => cu.name === t.custName);
+            const pref = document.getElementById('prefix').value;
+            
+            if (!t.custPhone) {
+                showToast('الزبون ليس له رقم مسجل');
+                return;
+            }
+
+            let msg = `*إشعار شحن من محلنا*%0A`;
+            msg += `---------------------%0A`;
+            msg += `الرقم التسلسلي: #${t.serial}%0A`;
+            msg += `العملية: ${t.type === 'charge' ? 'شحن جهاز' : 'إيداع رصيد'}%0A`;
+            msg += `القيمة: ${t.amount} شيكل%0A`;
+            msg += `رصيدك المتبقي: ${c.balance} شيكل%0A`;
+            msg += `---------------------%0A`;
+            msg += `شكراً لثقتكم بنا.`;
+
+            const fullPhone = pref + t.custPhone.replace(/^0+/, '');
+            window.open(`https://wa.me/${fullPhone}?text=${msg}`, '_blank');
+        }
+
+        function saveDB() {
+            localStorage.setItem('gazaChargeDB', JSON.stringify(db));
+        }
+
+        function closeModal() {
+            document.getElementById('successModal').classList.add('hidden');
+            document.getElementById('successModal').classList.remove('flex');
+        }
+
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full text-sm font-bold shadow-2xl z-[100] transition-opacity';
+            toast.innerText = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 500); }, 2000);
+        }
+
+        function clearData() {
+            if (confirm('هل أنت متأكد من مسح جميع البيانات؟ لا يمكن التراجع!')) {
+                localStorage.removeItem('gazaChargeDB');
+                location.reload();
+            }
+        }
+
+        // Initialize Stats
+        window.onload = updateMiniStats;
+
+    </script>
+</body>
+</html>
